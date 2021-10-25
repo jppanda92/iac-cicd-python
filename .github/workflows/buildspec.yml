@@ -19,18 +19,72 @@ jobs:
   build:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
-
+    env:
+      AWS_REGION: us-east-1
+      CDK_DEFAULT_REGION: us-east-1
+      CDK_DEFAULT_ACCOUNT: ${{ secrets.CDK_DEFAULT_ACCOUNT }}
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      - name: Checkout
+        uses: actions/checkout@v2
 
+      - name: Login to Docker Hub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+      
+      - name: Build Docker Image
+        run: |
+          cd flask/app/
+          docker build -t jppanda/iac-cicd-python:latest .
+          docker push jppanda/iac-cicd-python:latest
+          cd ../../
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install CDK
+        run: |
+          npm install -g aws-cdk
+          cdk --version
+          cdk bootstrap aws://${{ env.CDK_DEFAULT_ACCOUNT }}/${{ env.CDK_DEFAULT_REGION }}
+
+      - name: CDK Deploy
+        run: |
+          cd infra-app/
+          npm install
+          cdk deploy --all -O output.json
+          echo 'HOSTNAME=$(jq '.InfraAppStack.InstanceHostName' output.json) >> $GITHUB_ENV
+          echo ${{ env.HOSTNAME }} 
+      
+      - name: SSH into EC2
+        uses: garygrossgarten/github-action-ssh@release
+        with:
+          command: ls -a
+          host: ${{ env.HOSTNAME }}
+          username: ${{ secrets.EC2_USER_NAME }}
+          privateKey: ${{ secrets.PRIVATE_KEY}}
+          
+      # Runs a set of commands using the runners shell
+      - name: Deploy App on EC2
+        run: |
+          sudo yum install -y docker
+          sudo yum install -y git
+          sudo curl -L https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose
+          sudo chmod +x /usr/local/bin/docker-compose
+          docker-compose version 
+          git clone https://github.com/jppanda92/iac-cicd-python.git
+          cd iac-cicd-python/flask/app/
+          docker-compose up -d
+          curl https://${{ env.HOSTNAME }}:5000
+          exit
+      
       # Runs a single command using the runners shell
       - name: Run a one-line script
-        run: echo Hello, world!
-
-      # Runs a set of commands using the runners shell
-      - name: Run a multi-line script
-        run: |
-          echo Add other actions to build,
-          echo test, and deploy your project.
+        run: echo "Workflow completed successfully"
