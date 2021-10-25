@@ -33,13 +33,13 @@ jobs:
         uses: docker/login-action@v1
         with:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_PASSWORD }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
       
       - name: Build Docker Image
         run: |
           cd flask/app/
-          docker build -t jppanda/iac-cicd-python:latest .
-          docker push jppanda/iac-cicd-python:latest
+          docker build -t ${{ secrets.DOCKER_HUB_USERNAME }}/iac-cicd-python:latest .
+          docker push ${{ secrets.DOCKER_HUB_USERNAME }}/iac-cicd-python:latest
           cd ../../
 
       - name: Configure AWS credentials
