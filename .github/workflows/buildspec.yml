@@ -59,7 +59,7 @@ jobs:
         run: |
           cd infra-app/
           npm install
-          cdk deploy --all -O output.json -y
+          cdk deploy --all -O output.json --require-approval never
           echo 'HOSTNAME=$(jq '.InfraAppStack.InstanceHostName' output.json) >> $GITHUB_ENV
           echo ${{ env.HOSTNAME }} 
       
