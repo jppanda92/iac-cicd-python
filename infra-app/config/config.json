@@ -1,0 +1,5 @@
+{
+    "vpcId": "vpc-5cabe326",
+    "instanceType": "t3.micro",
+    "instanceName": "ec2-web-server-flask"
+}
