@@ -60,7 +60,7 @@ jobs:
           cd infra-app/
           npm install
           cdk deploy --all -O output.json --require-approval never
-          echo 'HOSTNAME=$(jq .InfraAppStack.InstanceHostName output.json) >> $GITHUB_ENV
+          echo 'HOSTNAME=$(jq .InfraAppStack.InstanceHostName output.json)' >> $GITHUB_ENV
           echo ${{ env.HOSTNAME }} 
       
       - name: SSH into EC2
